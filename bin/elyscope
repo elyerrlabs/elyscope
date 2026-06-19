@@ -16,11 +16,6 @@ if (!file_exists($basePath . "/composer.json")) {
 }
 
 $source = __DIR__ . '/../resources/installed-package.php';
-$target = $basePath . '/installed-package.php';
-
-if (!file_exists($target)) {
-    copy($source, $target);
-}
 
 $command = $args[0] ?? '';
 $args = array_slice($argv, 1);
@@ -30,6 +25,8 @@ main();
 function main(): void
 {
     global $args;
+    global $basePath;
+    global $source;
 
     if (
         empty($args) ||
@@ -41,6 +38,12 @@ function main(): void
     }
 
     $command = $args[0] ?? '';
+
+    $target = $basePath . '/installed-package.php';
+
+    if (!file_exists($target)) {
+        copy($source, $target);
+    }
 
     switch ($command) {
 
