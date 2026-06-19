@@ -2,7 +2,26 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . "/../vendor/autoload.php";
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',               // Local project
+    __DIR__ . '/../../../../vendor/autoload.php',      // Composer global
+];
+
+$vendorPath = null;
+
+foreach ($autoloadPaths as $path) {
+    if (file_exists($path)) {
+        $vendorPath = $path;
+        break;
+    }
+}
+
+if ($vendorPath === null) {
+    fwrite(STDERR, "Unable to locate Composer autoload.php.\n");
+    exit(1);
+}
+
+require_once $vendorPath;
 
 use Symfony\Component\Filesystem\Filesystem;
 
@@ -10,10 +29,7 @@ $fs = new Filesystem();
 $basePath = getcwd();
 
 
-//Checking composer file
-if (!file_exists($basePath . "/composer.json")) {
-    throw new RuntimeException("composer.json not found in " . $basePath);
-}
+
 
 $source = __DIR__ . '/../resources/installed-package.php';
 
@@ -35,6 +51,11 @@ function main(): void
         in_array('help', $args, true)
     ) {
         help();
+    }
+
+    // Check composer file
+    if (!file_exists($basePath . "/composer.json")) {
+        throw new RuntimeException("composer.json not found in " . $basePath);
     }
 
     $command = $args[0] ?? '';
