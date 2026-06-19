@@ -1,0 +1,22 @@
+{
+  "name": "elyerr/elyscope",
+  "description": "PHP dependency isolation and namespace scoping tool.",
+  "type": "library",
+  "license": "AGPL-3.0-or-later",
+  "authors": [
+    {
+      "name": "Elvis Yerel Roman Concha",
+      "email": "yerel9212@yahoo.es",
+      "homepage": "https://github.com/elyerr/elyscope",
+      "role": "Owner"
+    }
+  ],
+  "bin": [
+    "bin/elyscope"
+  ],
+  "require": {
+    "php": "^8.2",
+    "humbug/php-scoper": "^0.18.18",
+    "symfony/filesystem": "^7.4"
+  }
+}
