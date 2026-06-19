@@ -72,34 +72,42 @@ elyscope --help
 
 If `elyscope` is not recognized, Composer's global bin directory may not be available in your system `PATH`.
 
-Display the Composer global bin directory:
+Add Composer's global bin directory to your shell configuration:
+
+```bash
+echo 'export PATH="$PATH:$HOME/.composer/vendor/bin"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+If your system uses Composer's XDG directory structure, use:
+
+```bash
+echo 'export PATH="$PATH:$HOME/.config/composer/vendor/bin"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+You can check the exact Composer bin directory with:
 
 ```bash
 composer global config bin-dir --absolute
 ```
 
-You can run ElyScope directly using the full path returned by the command above:
+Alternatively, run ElyScope using its full path:
 
 ```bash
-/path/to/composer/bin/elyscope --help
+$(composer global config bin-dir --absolute)/elyscope --help
 ```
 
-Common locations include:
+Common Composer global bin locations include:
 
 ```bash
-~/.config/composer/vendor/bin/elyscope --help
+~/.composer/vendor/bin
 ```
 
 or
 
 ```bash
-~/.composer/vendor/bin/elyscope --help
-```
-
-Alternatively, you can execute ElyScope through PHP without modifying your `PATH`:
-
-```bash
-php "$(composer global config bin-dir --absolute)/elyscope" --help
+~/.config/composer/vendor/bin
 ```
 
 ### Add Composer Bin Directory to PATH
@@ -113,14 +121,6 @@ export PATH="$(composer global config bin-dir --absolute):$PATH"
 ```
 
 Add the command above to your `~/.bashrc`, `~/.zshrc`, or shell configuration file.
-
-### Create a Symbolic Link
-
-You can also create a symbolic link to make the command available system-wide:
-
-```bash
-sudo ln -s "$(composer global config bin-dir --absolute)/elyscope" /usr/local/bin/elyscope
-```
 
 Verify that the link works:
 
