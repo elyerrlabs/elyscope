@@ -28,9 +28,6 @@ use Symfony\Component\Filesystem\Filesystem;
 $fs = new Filesystem();
 $basePath = getcwd();
 
-
-
-
 $source = __DIR__ . '/../resources/installed-package.php';
 
 $command = $args[0] ?? '';
@@ -244,7 +241,26 @@ function preUpdate(): void
 
 function phpScoperBinary(): string
 {
-    return __DIR__ . '/../vendor/bin/php-scoper';
+    $autoloadPaths = [
+        __DIR__ . '/../vendor/bin/php-scoper',               // Local project
+        __DIR__ . '/../../../../vendor/bin/php-scoper',      // Composer global
+    ];
+
+    $phpScoper = null;
+
+    foreach ($autoloadPaths as $path) {
+        if (file_exists($path)) {
+            $phpScoper = $path;
+            break;
+        }
+    }
+
+    if ($phpScoper === null) {
+        fwrite(STDERR, "Unable to locate php-scoper.\n");
+        exit(1);
+    }
+
+    return $phpScoper;
 }
 
 function installPipeline(): void
