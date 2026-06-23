@@ -21,6 +21,7 @@ if ($vendorPath === null) {
     exit(1);
 }
 
+
 require_once $vendorPath;
 
 use Symfony\Component\Filesystem\Filesystem;
@@ -55,105 +56,59 @@ function main(): void
         throw new RuntimeException("composer.json not found in " . $basePath);
     }
 
-    $command = $args[0] ?? '';
-
     $target = $basePath . '/installed-package.php';
 
     if (!file_exists($target)) {
         copy($source, $target);
     }
 
-    switch ($command) {
-
-        case 'install':
-            install();
-            break;
-
-        case 'update':
-            update();
-            break;
-
-        case 'require':
-        case 'remove':
-            packageOperation();
-            break;
-
-        default:
-            run('composer ' . implode(' ', $args));
-            exit(0);
-    }
+    packageOperation();
 }
 
 /// ---------Functions---------------////
+
+/**
+ * Detect php-scope
+ * @return string
+ */
+function phpScoperBinary(): string
+{
+    $autoloadPaths = [
+        __DIR__ . '/../vendor/bin/php-scoper',               // Local project
+        __DIR__ . '/../../../../vendor/bin/php-scoper',      // Composer global
+    ];
+
+    $phpScoper = null;
+
+    foreach ($autoloadPaths as $path) {
+        if (file_exists($path)) {
+            $phpScoper = $path;
+            break;
+        }
+    }
+
+    if ($phpScoper === null) {
+        fwrite(STDERR, "Unable to locate php-scoper.\n");
+        exit(1);
+    }
+
+    return $phpScoper;
+}
+
 function packageOperation(): void
 {
     global $args;
-    global $fs;
 
-    if (!is_dir('vendor-packsave')) {
-        throw new RuntimeException(
-            'vendor-packsave not found. Run elymod install first.'
-        );
-    }
+    cleanVendor();
 
-    $fs->remove('vendor');
+    run("COMPOSER_VENDOR_DIR='vendor' composer " . implode(' ', $args));
 
-    $fs->mirror('vendor-packsave', 'vendor');
-
-    $command = implode(' ', $args);
-
-    run("composer {$command} --no-scripts");
-
-    installPipeline();
+    dumpPipeline();
 
     echo "\nPackage operation completed successfully !!!\n";
 
     exit(0);
 }
-
-function install(): void
-{
-    global $args;
-
-    preInstall();
-
-    $options = implode(' ', array_slice($args, 1));
-
-    run(
-        'composer install ' .
-        $options .
-        ' --no-scripts'
-    );
-
-    installPipeline();
-
-    echo "\nDependencies installed successfully !!!\n";
-
-    exit(0);
-}
-
-
-function update(): void
-{
-    global $args;
-
-    preUpdate();
-
-    $options = implode(' ', array_slice($args, 1));
-
-    run(
-        'composer update ' .
-        $options .
-        ' --no-scripts'
-    );
-
-    updatePipeline();
-
-    echo "\nDependencies updated successfully !!!\n";
-
-    exit(0);
-}
-
 
 /**
  * Run command
@@ -180,177 +135,28 @@ function run(string $cmd): void
     }
 }
 
-
-function composerInstallProd()
-{
-    run("composer install --no-dev --no-scripts");
-}
-
-function composerInstallDev()
-{
-    run("composer install --no-scripts");
-}
-
-function composerUpdateProd()
-{
-    run('composer update --no-dev --no-scripts');
-}
-
-function composerUpdateDev()
-{
-    run("composer update --no-scripts");
-}
-
 /**
  * Pre install
  * @return void
  */
-function preInstall(): void
+function cleanVendor(): void
 {
     global $fs;
 
     echo "Preparing install...\n";
-
-    if (is_dir("vendor")) {
-        $fs->remove("vendor");
-    }
-
-    if (is_dir('vendor-packsave')) {
-        $fs->remove("vendor-packsave");
-    }
 
     if (is_dir('vendor-build')) {
         $fs->remove("vendor-build");
     }
 }
 
-function preUpdate(): void
-{
-    global $fs;
-
-    echo "Preparing update...\n";
-
-    if (!is_dir("vendor") || !is_dir('vendor-packsave')) {
-        echo "First install packages\n";
-        exit;
-    }
-
-    $fs->remove("vendor");
-    $fs->mirror("vendor-packsave", "vendor");
-}
-
-function phpScoperBinary(): string
-{
-    $autoloadPaths = [
-        __DIR__ . '/../vendor/bin/php-scoper',               // Local project
-        __DIR__ . '/../../../../vendor/bin/php-scoper',      // Composer global
-    ];
-
-    $phpScoper = null;
-
-    foreach ($autoloadPaths as $path) {
-        if (file_exists($path)) {
-            $phpScoper = $path;
-            break;
-        }
-    }
-
-    if ($phpScoper === null) {
-        fwrite(STDERR, "Unable to locate php-scoper.\n");
-        exit(1);
-    }
-
-    return $phpScoper;
-}
-
-function installPipeline(): void
-{
-    global $fs;
-
-    echo "Running install pipeline...\n";
-
-    run(phpScoperBinary() . " add-prefix --force");
-
-    $fs->mirror("vendor", "vendor-packsave");
-
-    $fs->remove("vendor");
-
-    $fs->mirror("vendor-build", "vendor");
-
-    $fs->remove("vendor-build");
-
-    dumpPipeline();
-
-    run("composer dumpautoload -o");
-}
-
-function updatePipeline(): void
-{
-    global $fs;
-
-    echo "Running update pipeline...\n";
-
-    $fs->remove("vendor-packsave");
-
-    $fs->mirror("vendor", "vendor-packsave");
-
-    run(phpScoperBinary() . " add-prefix --force");
-
-    $fs->remove("vendor");
-
-    $fs->mirror("vendor-build", "vendor");
-
-    $fs->remove("vendor-build");
-
-    dumpPipeline();
-
-    run("composer dumpautoload -o");
-}
-
 function dumpPipeline(): void
 {
     echo "Finalizing autoload...\n";
+    run(phpScoperBinary() . " add-prefix --force");
     run("php installed-package.php");
+    run("COMPOSER_VENDOR_DIR='vendor-build' composer dumpautoload -o");
 }
-
-function installProd(): void
-{
-    preInstall();
-    composerInstallProd();
-    installPipeline();
-    echo "\nDependencies installed successfully !!!\n";
-    exit(0);
-}
-
-function installDev(): void
-{
-    preInstall();
-    composerInstallDev();
-    installPipeline();
-
-    echo "\nDependencies updated successfully !!!\n";
-    exit(0);
-}
-
-function updateProd(): void
-{
-    preUpdate();
-    composerUpdateProd();
-    updatePipeline();
-    echo "\nDependencies updated successfully !!!\n";
-    exit(0);
-}
-
-function updateDev(): void
-{
-    preUpdate();
-    composerUpdateDev();
-    updatePipeline();
-
-    echo "\nDependencies updated successfully !!!\n";
-    exit(0);
-}
-
 
 function help(): void
 {
@@ -368,12 +174,9 @@ Commands
   install
       Install dependencies in development mode.
 
-      Workflow:
-      - Remove vendor
+      Workflow: 
       - Composer install
-      - Run PHP-Scoper
-      - Create vendor-packsave backup
-      - Replace vendor with vendor-build
+      - Run PHP-Scoper  
       - Update installed.json
       - Generate optimized autoload
 
